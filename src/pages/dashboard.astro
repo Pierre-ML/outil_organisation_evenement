@@ -1,0 +1,113 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+
+const auth = Astro.locals.auth!;
+const pb = Astro.locals.pb!;
+const user = auth.model;
+
+let stockStats = { total: 0, contributors: 0, myTotal: 0 };
+
+try {
+  const allStock = await pb.collection('stockage').getFullList<{ qui: string; combien: number }>();
+  const uniqueUsers = new Set(allStock.map((s) => s.qui));
+  stockStats = {
+    total: allStock.reduce((sum, s) => sum + s.combien, 0),
+    contributors: uniqueUsers.size,
+    myTotal: allStock.filter((s) => s.qui === user.id).reduce((sum, s) => sum + s.combien, 0),
+  };
+} catch {}
+
+const pbUrl = import.meta.env.POCKETBASE_URL;
+const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}` : null;
+---
+
+<AuthLayout title="Dashboard" user={user}>
+  <div class="py-8">
+    <!-- Welcome header -->
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={user.name}
+          class="w-16 h-16 rounded-2xl object-cover shrink-0"
+          style="border: 2px solid rgba(139,92,246,0.4);"
+        />
+      ) : (
+        <div
+          class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black shrink-0"
+          style="background: linear-gradient(135deg, #8b5cf6, #ec4899);"
+        >
+          {user.name?.[0]?.toUpperCase() ?? 'U'}
+        </div>
+      )}
+      <div>
+        <p class="text-gray-500 text-sm">Bienvenue,</p>
+        <h1 class="text-2xl sm:text-3xl font-bold">{user.name}</h1>
+      </div>
+      {user.admin && (
+        <span
+          class="ml-auto text-xs font-semibold px-3 py-1.5 rounded-full hidden sm:block"
+          style="background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;"
+        >
+          Admin
+        </span>
+      )}
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+      {[
+        { label: 'Mon stock', value: stockStats.myTotal, unit: 'articles' },
+        { label: 'Stock commun', value: stockStats.total, unit: 'articles au total' },
+        { label: 'Contributeurs', value: stockStats.contributors, unit: 'personnes avec du stock' },
+      ].map((stat) => (
+        <div class="glass-card p-6 rounded-2xl">
+          <div class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">{stat.label}</div>
+          <div class="text-4xl font-black grad-text mb-1">{stat.value}</div>
+          <div class="text-gray-600 text-xs">{stat.unit}</div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Quick access -->
+    <h2 class="text-lg font-semibold text-gray-400 mb-4 uppercase tracking-wider text-xs">Accès rapide</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[
+        { href: '/stock', icon: '📦', title: 'Mon stock', desc: 'Gère ce que tu ramènes' },
+        { href: '/lieux', icon: '📍', title: 'Lieu de la soirée', desc: 'Adresse et carte interactive' },
+        { href: '/profil', icon: '👤', title: 'Mon profil', desc: 'Photo de profil et mot de passe' },
+      ].map((card) => (
+        <a
+          href={card.href}
+          class="glass-card p-6 rounded-2xl flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-200"
+        >
+          <div class="text-3xl">{card.icon}</div>
+          <div>
+            <div class="font-semibold group-hover:text-violet-400 transition-colors">{card.title}</div>
+            <div class="text-gray-500 text-sm">{card.desc}</div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-700 group-hover:text-violet-500 ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      ))}
+
+      {user.admin && (
+        <a
+          href="/admin"
+          class="p-6 rounded-2xl flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-200"
+          style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);"
+        >
+          <div class="text-3xl">⚙️</div>
+          <div>
+            <div class="font-semibold text-violet-400 group-hover:text-violet-300 transition-colors">Administration</div>
+            <div class="text-gray-500 text-sm">Utilisateurs, lieux, stock global</div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-700 group-hover:text-violet-500 ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      )}
+    </div>
+  </div>
+</AuthLayout>

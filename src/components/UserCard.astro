@@ -1,0 +1,53 @@
+---
+interface Props {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+    admin?: boolean;
+  };
+  pbUrl: string;
+  onDelete?: boolean;
+}
+
+const { user, pbUrl, onDelete = false } = Astro.props;
+const avatarUrl = user.avatar
+  ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}`
+  : null;
+---
+
+<div class="glass-card p-4 rounded-xl flex items-center gap-3" data-user-id={user.id}>
+  {avatarUrl ? (
+    <img src={avatarUrl} alt={user.name} class="w-10 h-10 rounded-full object-cover shrink-0 border border-white/10" />
+  ) : (
+    <div
+      class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+      style="background: linear-gradient(135deg, #8b5cf6, #ec4899);"
+    >
+      {user.name?.[0]?.toUpperCase() ?? 'U'}
+    </div>
+  )}
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="font-medium truncate">{user.name}</span>
+      {user.admin && (
+        <span class="text-xs px-2 py-0.5 rounded-full" style="background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3);">
+          Admin
+        </span>
+      )}
+    </div>
+    <div class="text-xs text-gray-500 truncate">{user.email}</div>
+  </div>
+  {onDelete && (
+    <button
+      class="delete-user-btn shrink-0 p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+      data-id={user.id}
+      aria-label="Supprimer"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    </button>
+  )}
+</div>

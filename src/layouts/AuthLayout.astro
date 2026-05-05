@@ -1,0 +1,35 @@
+---
+import Navbar from '../components/Navbar.astro';
+import type { AuthUser } from '../lib/auth';
+
+interface Props {
+  title: string;
+  user: AuthUser;
+}
+
+const { title, user } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — SoiréeApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style is:global>
+      @import "../styles/global.css";
+    </style>
+  </head>
+  <body>
+    <Navbar user={user} />
+    <main class="pt-20 px-4 max-w-6xl mx-auto pb-16">
+      <slot />
+    </main>
+  </body>
+</html>

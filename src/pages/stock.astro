@@ -1,0 +1,299 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+import StockChart from '../components/StockChart.astro';
+
+const auth = Astro.locals.auth!;
+const pb = Astro.locals.pb!;
+const user = auth.model;
+
+const TYPE_LABELS: Record<string, string> = {
+  alcool: 'Alcool',
+  soft: 'Soft',
+  drogue: 'Drogue',
+  manger: 'Manger',
+};
+const TYPE_ICONS: Record<string, string> = {
+  alcool: '🍺',
+  soft: '🥤',
+  drogue: '💊',
+  manger: '🍕',
+};
+
+let myStock: any[] = [];
+let allStock: any[] = [];
+let usersMap: Record<string, string> = {};
+
+try {
+  myStock = await pb.collection('stockage').getFullList({
+    filter: `qui = "${user.id}"`,
+    sort: '-created',
+  });
+} catch {}
+
+try {
+  allStock = await pb.collection('stockage').getFullList({ expand: 'qui' });
+  for (const s of allStock) {
+    if (s.expand?.qui?.name) usersMap[s.qui] = s.expand.qui.name;
+  }
+} catch {}
+
+const agg = {
+  alcool: 0,
+  soft: 0,
+  drogue: 0,
+  manger: 0,
+};
+for (const s of allStock) {
+  const types = Array.isArray(s.type) ? s.type : [s.type];
+  for (const t of types) {
+    if (t in agg) agg[t as keyof typeof agg] += s.combien;
+  }
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  alcool: '#8b5cf6',
+  soft: '#06b6d4',
+  drogue: '#ec4899',
+  manger: '#f59e0b',
+};
+
+// Pre-compute breakdown groups for the template (no TS inside JSX)
+const breakdown = (['alcool', 'soft', 'drogue', 'manger'] as const)
+  .map((type) => ({
+    type,
+    color: TYPE_COLORS[type],
+    icon: TYPE_ICONS[type],
+    label: TYPE_LABELS[type],
+    total: agg[type],
+    items: allStock.filter((s) => {
+      const ts = Array.isArray(s.type) ? s.type : [s.type];
+      return ts.includes(type);
+    }),
+  }))
+  .filter((g) => g.items.length > 0);
+
+const pbUrl = import.meta.env.POCKETBASE_URL;
+---
+
+<AuthLayout title="Stock" user={user}>
+  <div class="py-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold mb-1">Stock</h1>
+      <p class="text-gray-500">Gère ce que tu ramènes à la soirée.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- ========== MON STOCK ========== -->
+      <div>
+        <h2 class="text-base font-semibold text-gray-400 uppercase tracking-wider text-xs mb-4">Mon stock</h2>
+
+        <!-- Add form -->
+        <div class="glass-card p-6 rounded-2xl mb-5">
+          <h3 class="font-semibold mb-4">Ajouter un article</h3>
+
+          <div
+            id="form-error"
+            class="hidden mb-4 p-3 rounded-xl text-sm"
+            style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;"
+          ></div>
+          <div
+            id="form-success"
+            class="hidden mb-4 p-3 rounded-xl text-sm"
+            style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;"
+          ></div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="label" for="stock-nom">Nom</label>
+                <input type="text" id="stock-nom" placeholder="Ex: Ricard" class="input-field" />
+              </div>
+              <div>
+                <label class="label" for="stock-combien">Quantité</label>
+                <input type="number" id="stock-combien" min="1" placeholder="Ex: 2" class="input-field" />
+              </div>
+            </div>
+
+            <div>
+              <label class="label" for="stock-type">Type</label>
+              <select id="stock-type" class="select-field">
+                <option value="alcool">🍺 Alcool</option>
+                <option value="soft">🥤 Soft</option>
+                <option value="drogue">💊 Drogue</option>
+                <option value="manger">🍕 Manger</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="label" for="stock-img">Photo (optionnel)</label>
+              <input
+                type="file"
+                id="stock-img"
+                accept="image/*"
+                class="w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium cursor-pointer"
+                style="file:background: rgba(139,92,246,0.15); file:color: #a78bfa;"
+              />
+            </div>
+
+            <button id="add-stock-btn" class="w-full py-3 rounded-xl text-sm grad-btn">
+              Ajouter l'article
+            </button>
+          </div>
+        </div>
+
+        <!-- My items -->
+        <div id="my-stock-list" class="space-y-3">
+          {myStock.length === 0 ? (
+            <div class="glass-card p-8 rounded-2xl text-center">
+              <div class="text-3xl mb-3">📭</div>
+              <p class="text-gray-500 text-sm">Aucun article dans ton stock.</p>
+            </div>
+          ) : (
+            myStock.map((item) => {
+              const types = Array.isArray(item.type) ? item.type : [item.type];
+              const firstType = types[0] ?? 'alcool';
+              return (
+                <div class="stock-item glass-card p-4 rounded-xl flex items-center gap-3" data-id={item.id}>
+                  {item.img ? (
+                    <img
+                      src={`${pbUrl}/api/files/stockage/${item.id}/${item.img}`}
+                      alt={item.nom}
+                      class="w-12 h-12 rounded-xl object-cover shrink-0"
+                    />
+                  ) : (
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: rgba(255,255,255,0.05);">
+                      {TYPE_ICONS[firstType] ?? '📦'}
+                    </div>
+                  )}
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">{item.nom}</div>
+                    <div class="text-xs text-gray-500 mt-0.5">
+                      x{item.combien} · {types.map((t: string) => TYPE_LABELS[t] ?? t).join(', ')}
+                    </div>
+                  </div>
+                  <button
+                    class="delete-btn shrink-0 p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    data-id={item.id}
+                    aria-label="Supprimer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <!-- ========== STOCK COMMUN ========== -->
+      <div>
+        <h2 class="text-base font-semibold text-gray-400 uppercase tracking-wider text-xs mb-4">Stock commun</h2>
+
+        <!-- Pie chart -->
+        <div class="mb-6">
+          <StockChart alcool={agg.alcool} soft={agg.soft} drogue={agg.drogue} manger={agg.manger} />
+        </div>
+
+        <!-- Breakdown by type -->
+        {breakdown.map((group) => (
+          <div class="glass-card p-4 rounded-xl mb-3">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-2.5 h-2.5 rounded-full shrink-0" style={`background: ${group.color}`}></div>
+              <span class="font-medium text-sm">{group.icon} {group.label}</span>
+              <span class="ml-auto text-xs text-gray-500">Total: {group.total}</span>
+            </div>
+            <div class="space-y-2">
+              {group.items.map((item) => (
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-300 truncate flex-1">{item.nom}</span>
+                  <div class="flex items-center gap-3 ml-2 shrink-0">
+                    <span class="text-gray-500">×{item.combien}</span>
+                    {user.admin && (
+                      <span class="text-xs text-gray-600">{usersMap[item.qui] ?? '?'}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</AuthLayout>
+
+<script>
+  const addBtn = document.getElementById('add-stock-btn') as HTMLButtonElement;
+  const formError = document.getElementById('form-error') as HTMLDivElement;
+  const formSuccess = document.getElementById('form-success') as HTMLDivElement;
+
+  function showMsg(el: HTMLDivElement, msg: string) {
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  addBtn.addEventListener('click', async () => {
+    const nom = (document.getElementById('stock-nom') as HTMLInputElement).value.trim();
+    const combien = (document.getElementById('stock-combien') as HTMLInputElement).value;
+    const type = (document.getElementById('stock-type') as HTMLSelectElement).value;
+    const imgInput = document.getElementById('stock-img') as HTMLInputElement;
+    const imgFile = imgInput.files?.[0];
+
+    formError.classList.add('hidden');
+    formSuccess.classList.add('hidden');
+
+    if (!nom || !combien || Number(combien) < 1) {
+      showMsg(formError, 'Nom et quantité valide requis.');
+      return;
+    }
+
+    addBtn.disabled = true;
+    addBtn.textContent = 'Ajout en cours…';
+
+    const fd = new FormData();
+    fd.append('nom', nom);
+    fd.append('combien', combien);
+    fd.append('type', type);
+    if (imgFile) fd.append('img', imgFile);
+
+    try {
+      const res = await fetch('/api/stock/add', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showMsg(formError, data.message ?? 'Erreur lors de l\'ajout.');
+      } else {
+        showMsg(formSuccess, 'Article ajouté ! Rechargement…');
+        setTimeout(() => window.location.reload(), 800);
+      }
+    } catch {
+      showMsg(formError, 'Erreur réseau.');
+    } finally {
+      addBtn.disabled = false;
+      addBtn.textContent = 'Ajouter l\'article';
+    }
+  });
+
+  // Delete items
+  document.querySelectorAll('.delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      const target = e.currentTarget as HTMLElement;
+      const id = target.dataset.id!;
+      if (!confirm('Supprimer cet article ?')) return;
+
+      try {
+        const res = await fetch(`/api/stock/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          target.closest('.stock-item')?.remove();
+        } else {
+          const data = await res.json();
+          alert(data.message ?? 'Erreur lors de la suppression.');
+        }
+      } catch {
+        alert('Erreur réseau.');
+      }
+    });
+  });
+</script>

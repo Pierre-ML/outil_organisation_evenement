@@ -1,0 +1,155 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getAuthFromCookies } from '../lib/auth';
+
+const auth = getAuthFromCookies(Astro.cookies);
+if (auth) return Astro.redirect('/dashboard');
+---
+
+<Layout title="Accueil" description="Organise tes soirées entre amis avec SoiréeApp.">
+  <!-- Particles canvas -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <canvas id="particles" style="position:absolute;inset:0;opacity:0.35;"></canvas>
+  </div>
+
+  <!-- Hero -->
+  <section class="relative min-h-screen flex flex-col items-center justify-center px-4 text-center">
+    <div class="animate-fade-in">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium mb-8"
+           style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;">
+        ✨ Réservé aux amis
+      </div>
+
+      <h1 class="text-5xl sm:text-7xl font-black mb-6 leading-tight tracking-tight">
+        <span class="grad-text">SoiréeApp</span>
+      </h1>
+      <p class="text-gray-400 text-lg sm:text-xl mb-10 max-w-lg mx-auto leading-relaxed">
+        Organise tes soirées entre amis. Stock, lieux, et coordination — tout en un seul endroit.
+      </p>
+
+      <a
+        href="/login"
+        class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white font-semibold text-base grad-btn"
+      >
+        Se connecter
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </a>
+    </div>
+
+    <!-- Scroll hint -->
+    <div class="absolute bottom-10 flex flex-col items-center gap-2 animate-fade-in-delay2">
+      <span class="text-xs text-gray-600">Défiler</span>
+      <div class="w-0.5 h-8 rounded-full" style="background: linear-gradient(to bottom, rgba(139,92,246,0.5), transparent);"></div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="relative py-24 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16 animate-fade-in-delay">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Comment ça marche ?</h2>
+        <p class="text-gray-500 text-lg">Simple, rapide, efficace.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          {
+            icon: '🔐',
+            step: '01',
+            title: 'Connexion',
+            desc: "Accède avec les identifiants fournis par l'admin. Pas d'inscription publique.",
+          },
+          {
+            icon: '📦',
+            step: '02',
+            title: 'Stock',
+            desc: 'Renseigne ce que tu ramènes : alcool, soft, manger… Tout est centralisé.',
+          },
+          {
+            icon: '📍',
+            step: '03',
+            title: 'Lieu',
+            desc: "Découvre l'adresse de la soirée quand l'admin la révèle. Carte interactive.",
+          },
+          {
+            icon: '🎉',
+            step: '04',
+            title: 'Soirée',
+            desc: 'Profite de la soirée, tout est organisé !',
+          },
+        ].map((card) => (
+          <div
+            class="glass-card p-6 rounded-2xl flex flex-col gap-4 hover:-translate-y-1 transition-transform duration-300"
+          >
+            <div class="flex items-start justify-between">
+              <div class="text-3xl">{card.icon}</div>
+              <span class="text-xs font-mono text-gray-700">{card.step}</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-base mb-1">{card.title}</h3>
+              <p class="text-gray-500 text-sm leading-relaxed">{card.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 px-4 text-center">
+    <div class="max-w-xl mx-auto glass-card p-10 rounded-3xl">
+      <h2 class="text-2xl font-bold mb-3">Prêt pour la soirée ?</h2>
+      <p class="text-gray-500 mb-8">Connecte-toi et commence à organiser.</p>
+      <a href="/login" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-semibold grad-btn">
+        Se connecter
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 px-4 text-center" style="border-top: 1px solid rgba(255,255,255,0.05);">
+    <p class="text-gray-700 text-sm">SoiréeApp — Fait pour les soirées entre amis</p>
+  </footer>
+</Layout>
+
+<script>
+  const canvas = document.getElementById('particles') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = Array.from({ length: 70 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.25,
+    vy: (Math.random() - 0.5) * 0.25,
+    r: Math.random() * 1.8 + 0.4,
+    a: Math.random() * 0.45 + 0.1,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      const hue = Math.random() > 0.5 ? '139, 92, 246' : '236, 72, 153';
+      ctx.fillStyle = `rgba(${hue}, ${p.a})`;
+      ctx.fill();
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>

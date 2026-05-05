@@ -1,0 +1,266 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+
+const auth = Astro.locals.auth!;
+const pb = Astro.locals.pb!;
+const user = auth.model;
+
+let myStock: any[] = [];
+try {
+  myStock = await pb.collection('stockage').getFullList({
+    filter: `qui = "${user.id}"`,
+    sort: '-created',
+  });
+} catch {}
+
+const pbUrl = import.meta.env.POCKETBASE_URL;
+const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}` : null;
+
+const TYPE_LABELS: Record<string, string> = { alcool: 'Alcool', soft: 'Soft', drogue: 'Drogue', manger: 'Manger' };
+const TYPE_ICONS: Record<string, string> = { alcool: '🍺', soft: '🥤', drogue: '💊', manger: '🍕' };
+---
+
+<AuthLayout title="Mon profil" user={user}>
+  <div class="py-8 max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8">Mon profil</h1>
+
+    <!-- Avatar & info -->
+    <div class="glass-card p-6 rounded-2xl mb-6">
+      <div class="flex items-center gap-5 mb-6">
+        <div class="relative">
+          {avatarUrl ? (
+            <img
+              id="current-avatar"
+              src={avatarUrl}
+              alt={user.name}
+              class="w-20 h-20 rounded-2xl object-cover"
+              style="border: 2px solid rgba(139,92,246,0.4);"
+            />
+          ) : (
+            <div
+              id="current-avatar-initials"
+              class="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black"
+              style="background: linear-gradient(135deg, #8b5cf6, #ec4899);"
+            >
+              {user.name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+          )}
+        </div>
+        <div>
+          <div class="text-xl font-bold">{user.name}</div>
+          <div class="text-gray-500 text-sm">{user.email}</div>
+          {user.admin && (
+            <span class="inline-block mt-2 text-xs px-2 py-0.5 rounded-full" style="background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;">
+              Administrateur
+            </span>
+          )}
+        </div>
+      </div>
+
+      <!-- Avatar upload -->
+      <div>
+        <label class="label">Changer la photo de profil</label>
+        <div class="flex items-center gap-3 flex-wrap">
+          <input
+            type="file"
+            id="avatar-input"
+            accept="image/*"
+            class="text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium cursor-pointer"
+            style="file:background: rgba(139,92,246,0.15); file:color: #a78bfa;"
+          />
+          <button
+            id="avatar-btn"
+            class="px-4 py-2 rounded-xl text-sm font-medium grad-btn"
+          >
+            Mettre à jour
+          </button>
+        </div>
+        <div id="avatar-msg" class="hidden mt-3 text-sm p-3 rounded-lg"></div>
+      </div>
+    </div>
+
+    <!-- Password change -->
+    <div class="glass-card p-6 rounded-2xl mb-6">
+      <h2 class="font-semibold mb-5">Changer le mot de passe</h2>
+
+      <div id="pwd-error" class="hidden mb-4 p-3 rounded-xl text-sm" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;"></div>
+      <div id="pwd-success" class="hidden mb-4 p-3 rounded-xl text-sm" style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;"></div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="label" for="old-pwd">Mot de passe actuel</label>
+          <input type="password" id="old-pwd" placeholder="••••••••" class="input-field" autocomplete="current-password" />
+        </div>
+        <div>
+          <label class="label" for="new-pwd">Nouveau mot de passe</label>
+          <input type="password" id="new-pwd" placeholder="••••••••" class="input-field" autocomplete="new-password" />
+        </div>
+        <div>
+          <label class="label" for="confirm-pwd">Confirmer le nouveau mot de passe</label>
+          <input type="password" id="confirm-pwd" placeholder="••••••••" class="input-field" autocomplete="new-password" />
+        </div>
+        <button id="pwd-btn" class="w-full py-3 rounded-xl text-sm grad-btn">
+          Changer le mot de passe
+        </button>
+      </div>
+    </div>
+
+    <!-- My stock -->
+    <div class="glass-card p-6 rounded-2xl">
+      <h2 class="font-semibold mb-5">Mon stock ({myStock.length} article{myStock.length !== 1 ? 's' : ''})</h2>
+
+      {myStock.length === 0 ? (
+        <p class="text-gray-500 text-sm text-center py-6">Aucun article. Va sur la page Stock pour en ajouter.</p>
+      ) : (
+        <div class="space-y-3" id="profil-stock-list">
+          {myStock.map((item) => {
+            const types = Array.isArray(item.type) ? item.type : [item.type];
+            const firstType = types[0] ?? 'alcool';
+            return (
+              <div class="stock-row flex items-center gap-3 p-3 rounded-xl" style="background: rgba(255,255,255,0.03);" data-id={item.id}>
+                {item.img ? (
+                  <img src={`${pbUrl}/api/files/stockage/${item.id}/${item.img}`} alt={item.nom} class="w-10 h-10 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0" style="background: rgba(255,255,255,0.05);">
+                    {TYPE_ICONS[firstType] ?? '📦'}
+                  </div>
+                )}
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-sm truncate">{item.nom}</div>
+                  <div class="text-xs text-gray-500">x{item.combien} · {types.map((t: string) => TYPE_LABELS[t] ?? t).join(', ')}</div>
+                </div>
+                <button
+                  class="delete-stock-btn p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                  data-id={item.id}
+                  aria-label="Supprimer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </div>
+</AuthLayout>
+
+<script>
+  // Avatar upload
+  const avatarBtn = document.getElementById('avatar-btn') as HTMLButtonElement;
+  const avatarMsg = document.getElementById('avatar-msg') as HTMLDivElement;
+
+  avatarBtn.addEventListener('click', async () => {
+    const input = document.getElementById('avatar-input') as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      showAvatarMsg('Sélectionne une image.', false);
+      return;
+    }
+
+    avatarBtn.disabled = true;
+    avatarBtn.textContent = 'Upload…';
+    avatarMsg.classList.add('hidden');
+
+    const fd = new FormData();
+    fd.append('avatar', file);
+
+    try {
+      const res = await fetch('/api/profil/avatar', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        showAvatarMsg(data.message ?? 'Erreur upload.', false);
+      } else {
+        showAvatarMsg('Photo mise à jour ! Rechargement…', true);
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch {
+      showAvatarMsg('Erreur réseau.', false);
+    } finally {
+      avatarBtn.disabled = false;
+      avatarBtn.textContent = 'Mettre à jour';
+    }
+  });
+
+  function showAvatarMsg(msg: string, ok: boolean) {
+    avatarMsg.textContent = msg;
+    avatarMsg.className = `mt-3 text-sm p-3 rounded-lg ${ok ? '' : ''}`;
+    avatarMsg.style.cssText = ok
+      ? 'background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;'
+      : 'background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;';
+    avatarMsg.classList.remove('hidden');
+  }
+
+  // Password change
+  const pwdBtn = document.getElementById('pwd-btn') as HTMLButtonElement;
+  const pwdError = document.getElementById('pwd-error') as HTMLDivElement;
+  const pwdSuccess = document.getElementById('pwd-success') as HTMLDivElement;
+
+  pwdBtn.addEventListener('click', async () => {
+    const oldPassword = (document.getElementById('old-pwd') as HTMLInputElement).value;
+    const newPassword = (document.getElementById('new-pwd') as HTMLInputElement).value;
+    const confirmPassword = (document.getElementById('confirm-pwd') as HTMLInputElement).value;
+
+    pwdError.classList.add('hidden');
+    pwdSuccess.classList.add('hidden');
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      pwdError.textContent = 'Remplis tous les champs.';
+      pwdError.classList.remove('hidden');
+      return;
+    }
+
+    pwdBtn.disabled = true;
+    pwdBtn.textContent = 'Changement…';
+
+    try {
+      const res = await fetch('/api/profil/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        pwdError.textContent = data.message ?? 'Erreur.';
+        pwdError.classList.remove('hidden');
+      } else {
+        pwdSuccess.textContent = 'Mot de passe changé ! Reconnexion…';
+        pwdSuccess.classList.remove('hidden');
+        setTimeout(async () => {
+          await fetch('/api/auth/logout', { method: 'POST' });
+          window.location.href = '/login';
+        }, 1500);
+      }
+    } catch {
+      pwdError.textContent = 'Erreur réseau.';
+      pwdError.classList.remove('hidden');
+    } finally {
+      pwdBtn.disabled = false;
+      pwdBtn.textContent = 'Changer le mot de passe';
+    }
+  });
+
+  // Delete stock
+  document.querySelectorAll('.delete-stock-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      const target = e.currentTarget as HTMLElement;
+      const id = target.dataset.id!;
+      if (!confirm('Supprimer cet article ?')) return;
+
+      try {
+        const res = await fetch(`/api/stock/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          target.closest('.stock-row')?.remove();
+        } else {
+          const data = await res.json();
+          alert(data.message ?? 'Erreur.');
+        }
+      } catch {
+        alert('Erreur réseau.');
+      }
+    });
+  });
+</script>

@@ -1,0 +1,81 @@
+---
+interface Props {
+  alcool: number;
+  soft: number;
+  drogue: number;
+  manger: number;
+}
+
+const { alcool, soft, drogue, manger } = Astro.props;
+const total = alcool + soft + drogue + manger;
+
+const chartData = {
+  labels: [`Alcool (${alcool})`, `Soft (${soft})`, `Drogue (${drogue})`, `Manger (${manger})`],
+  data: [alcool, soft, drogue, manger],
+  colors: ['#8b5cf6', '#06b6d4', '#ec4899', '#f59e0b'],
+};
+---
+
+<div class="glass-card p-6 rounded-2xl">
+  {total === 0 ? (
+    <p class="text-center text-gray-500 py-8 text-sm">Aucun stock pour le moment.</p>
+  ) : (
+    <>
+      <div class="flex justify-center mb-4">
+        <canvas id="stock-pie-chart" width="240" height="240" style="max-width: 240px;"></canvas>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        {[
+          { label: 'Alcool', color: '#8b5cf6', count: alcool },
+          { label: 'Soft', color: '#06b6d4', count: soft },
+          { label: 'Drogue', color: '#ec4899', count: drogue },
+          { label: 'Manger', color: '#f59e0b', count: manger },
+        ].map(item => (
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full shrink-0" style={`background: ${item.color}`}></div>
+            <span class="text-sm text-gray-300 flex-1">{item.label}</span>
+            <span class="text-sm text-gray-500">{item.count}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</div>
+
+<script define:vars={{ chartData, total }}>
+  if (total > 0) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    script.onload = () => {
+      const canvas = document.getElementById('stock-pie-chart');
+      if (!canvas) return;
+      new Chart(canvas, {
+        type: 'pie',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            data: chartData.data,
+            backgroundColor: chartData.colors,
+            borderColor: '#0a0a0a',
+            borderWidth: 3,
+          }],
+        },
+        options: {
+          responsive: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const pct = Math.round((ctx.parsed / chartData.data.reduce((a, b) => a + b, 0)) * 100);
+                  return ` ${ctx.label} — ${pct}%`;
+                },
+              },
+            },
+          },
+        },
+      });
+    };
+    document.head.appendChild(script);
+  }
+</script>
