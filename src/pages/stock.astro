@@ -97,8 +97,18 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
               </select>
             </div>
             <div>
-              <label class="label" for="stock-img">Photo (optionnel)</label>
-              <input type="file" id="stock-img" accept="image/*" class="w-full text-sm text-white/30 cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium" style="file:background:rgba(255,255,255,.08);file:color:rgba(255,255,255,.6);" />
+              <label class="label mb-2 block">Photo (optionnel)</label>
+              <input type="file" id="stock-img" accept="image/*" class="sr-only" />
+              <div id="stock-img-drop" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all" style="border:2px dashed rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);" onclick="document.getElementById('stock-img').click()">
+                <img id="stock-img-preview" class="hidden w-10 h-10 rounded-lg object-cover shrink-0" />
+                <div id="stock-img-placeholder" class="flex items-center gap-2 text-white/25">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-sm">Clique pour ajouter une photo</span>
+                </div>
+                <span id="stock-img-name" class="hidden text-xs text-white/40 truncate"></span>
+              </div>
             </div>
             <button id="add-stock-btn" class="w-full py-3 rounded-full text-sm text-black grad-btn">Ajouter</button>
           </div>
@@ -166,7 +176,45 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   </div>
 </Layout>
 
-<script is:inline define:vars={{ userId: user.id, pbUrl }}>
+<script is:inline define:vars={{ userId: user.id, pbUrl, authToken: token }}>
+  function authFetch(url, opts = {}) {
+    const headers = { Authorization: `Bearer ${authToken}`, ...(opts.headers ?? {}) };
+    return fetch(url, { ...opts, headers });
+  }
+
+  // ---- Photo preview ----
+  const stockImgInput = document.getElementById('stock-img');
+  const stockImgDrop = document.getElementById('stock-img-drop');
+  const stockImgPreview = document.getElementById('stock-img-preview');
+  const stockImgPlaceholder = document.getElementById('stock-img-placeholder');
+  const stockImgName = document.getElementById('stock-img-name');
+
+  function showStockImgPreview(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      stockImgPreview.src = e.target.result;
+      stockImgPreview.classList.remove('hidden');
+      stockImgPlaceholder.classList.add('hidden');
+      stockImgName.textContent = file.name;
+      stockImgName.classList.remove('hidden');
+      stockImgDrop.style.borderColor = 'rgba(255,255,255,0.25)';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  stockImgInput.addEventListener('change', () => showStockImgPreview(stockImgInput.files?.[0]));
+  stockImgDrop.addEventListener('dragover', (e) => { e.preventDefault(); stockImgDrop.style.borderColor = 'rgba(255,255,255,0.35)'; });
+  stockImgDrop.addEventListener('dragleave', () => { stockImgDrop.style.borderColor = 'rgba(255,255,255,0.1)'; });
+  stockImgDrop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file); stockImgInput.files = dt.files;
+      showStockImgPreview(file);
+    }
+  });
+
   const formError = document.getElementById('form-error');
   const formSuccess = document.getElementById('form-success');
   const addBtn = document.getElementById('add-stock-btn');
@@ -197,7 +245,7 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
     if (imgFile) fd.append('img', imgFile);
 
     try {
-      const res = await fetch(`${pbUrl}/api/collections/stockage/records`, { method: 'POST', body: fd });
+      const res = await authFetch(`${pbUrl}/api/collections/stockage/records`, { method: 'POST', body: fd });
       if (!res.ok) {
         const data = await res.json();
         formError.textContent = data.message ?? 'Erreur lors de l\'ajout.';
@@ -221,7 +269,7 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
       const id = e.currentTarget.dataset.id;
       if (!confirm('Supprimer cet article ?')) return;
       try {
-        const res = await fetch(`${pbUrl}/api/collections/stockage/records/${id}`, { method: 'DELETE' });
+        const res = await authFetch(`${pbUrl}/api/collections/stockage/records/${id}`, { method: 'DELETE' });
         if (res.ok || res.status === 204) {
           e.currentTarget.closest('.stock-item')?.remove();
         } else {

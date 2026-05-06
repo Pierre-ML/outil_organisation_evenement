@@ -20,6 +20,31 @@ const pb = new PocketBase(import.meta.env.POCKETBASE_URL);
 pb.authStore.save(token, user as any);
 if (!pb.authStore.isValid) return Astro.redirect('/login');
 
+// Handle avatar upload server-side
+let avatarError = '';
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const file = formData.get('avatar');
+    if (file instanceof File && file.size > 0) {
+      const fd = new FormData();
+      fd.append('avatar', file);
+      const updated = await pb.collection('users').update(user.id, fd);
+      Astro.cookies.set('pb_auth', JSON.stringify({ token, record: updated }), {
+        path: '/',
+        maxAge: 604800,
+        sameSite: 'strict',
+        httpOnly: false,
+      });
+      return Astro.redirect('/profil');
+    } else {
+      avatarError = 'Sélectionne une image.';
+    }
+  } catch (e: any) {
+    avatarError = e?.message ?? 'Erreur lors de l\'upload.';
+  }
+}
+
 const TYPE_LABELS: Record<string, string> = { alcool: 'Alcool', soft: 'Soft', drogue: 'Drogue', manger: 'Manger' };
 const TYPE_INITIALS: Record<string, string> = { alcool: 'A', soft: 'S', drogue: 'D', manger: 'M' };
 
@@ -56,25 +81,44 @@ const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avat
         </div>
       </div>
 
-      <div>
-        <label class="label">Changer la photo de profil</label>
-        <div class="flex items-center gap-3 flex-wrap">
-          <input type="file" id="avatar-input" accept="image/*" class="text-sm text-white/30 cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium" style="file:background:rgba(255,255,255,.08);file:color:rgba(255,255,255,.55);" />
-          <button id="avatar-btn" class="px-5 py-2 rounded-full text-sm font-medium text-black grad-btn">Mettre à jour</button>
+      <form method="POST" enctype="multipart/form-data" id="avatar-form">
+        <label class="label mb-2 block">Photo de profil</label>
+        <input type="file" id="avatar-input" name="avatar" accept="image/*" class="sr-only" />
+        <div id="avatar-drop" class="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl cursor-pointer transition-all" style="border:2px dashed rgba(255,255,255,0.12);background:rgba(255,255,255,0.02);" onclick="document.getElementById('avatar-input').click()">
+          <img id="avatar-drop-preview" class="hidden w-24 h-24 rounded-2xl object-cover" style="border:1px solid rgba(255,255,255,0.15);" />
+          <div id="avatar-drop-placeholder" class="flex flex-col items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span class="text-sm text-white/30">Clique ou glisse une image ici</span>
+          </div>
+          <div id="avatar-drop-name" class="hidden text-xs text-white/40 text-center"></div>
         </div>
-        <div id="avatar-msg" class="hidden mt-3 text-sm p-3 rounded-lg"></div>
-      </div>
+        {avatarError && (
+          <div class="mt-3 text-sm p-3 rounded-xl" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgba(255,255,255,0.65);">{avatarError}</div>
+        )}
+        <button type="submit" id="avatar-btn" class="mt-3 w-full py-2.5 rounded-full text-sm font-medium text-black grad-btn">Mettre à jour la photo</button>
+      </form>
     </div>
 
     <div class="glass-card p-6 rounded-2xl mb-5">
-      <h2 class="font-semibold mb-3 text-white">Mot de passe</h2>
-      <div class="flex items-start gap-3 p-4 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white/30 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p class="text-sm text-white/35 leading-relaxed">
-          Les mots de passe sont gérés directement dans PocketBase. Contacte l'admin pour changer le tien.
-        </p>
+      <h2 class="font-semibold mb-4 text-white">Changer le mot de passe</h2>
+      <div id="pwd-error" class="hidden mb-4 p-3 rounded-xl text-sm" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgba(255,255,255,0.65);"></div>
+      <div id="pwd-success" class="hidden mb-4 p-3 rounded-xl text-sm" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);"></div>
+      <div class="space-y-3">
+        <div>
+          <label class="label" for="pwd-old">Mot de passe actuel</label>
+          <input type="password" id="pwd-old" placeholder="••••••••" class="input-field" />
+        </div>
+        <div>
+          <label class="label" for="pwd-new">Nouveau mot de passe</label>
+          <input type="password" id="pwd-new" placeholder="••••••••" class="input-field" />
+        </div>
+        <div>
+          <label class="label" for="pwd-confirm">Confirmer le nouveau</label>
+          <input type="password" id="pwd-confirm" placeholder="••••••••" class="input-field" />
+        </div>
+        <button id="pwd-btn" class="px-5 py-2.5 rounded-full text-sm font-medium text-black grad-btn">Changer le mot de passe</button>
       </div>
     </div>
 
@@ -115,52 +159,136 @@ const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avat
   </div>
 </Layout>
 
-<script is:inline define:vars={{ userId: user.id, pbUrl }}>
+<script is:inline define:vars={{ userId: user.id, pbUrl, authToken: token }}>
+  function authFetch(url, opts = {}) {
+    const headers = { Authorization: `Bearer ${authToken}`, ...(opts.headers ?? {}) };
+    return fetch(url, { ...opts, headers });
+  }
+
+  // ---- Avatar drag & drop preview (submit = form POST) ----
+  const avatarInput = document.getElementById('avatar-input');
+  const avatarDrop = document.getElementById('avatar-drop');
+  const avatarDropPreview = document.getElementById('avatar-drop-preview');
+  const avatarDropPlaceholder = document.getElementById('avatar-drop-placeholder');
+  const avatarDropName = document.getElementById('avatar-drop-name');
   const avatarBtn = document.getElementById('avatar-btn');
-  const avatarMsg = document.getElementById('avatar-msg');
 
-  avatarBtn.addEventListener('click', async () => {
-    const file = document.getElementById('avatar-input').files?.[0];
-    if (!file) { showAvatarMsg('Sélectionne une image.', false); return; }
+  function showFilePreview(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      avatarDropPreview.src = e.target.result;
+      avatarDropPreview.classList.remove('hidden');
+      avatarDropPlaceholder.classList.add('hidden');
+      avatarDropName.textContent = file.name;
+      avatarDropName.classList.remove('hidden');
+      avatarDrop.style.borderColor = 'rgba(255,255,255,0.3)';
+    };
+    reader.readAsDataURL(file);
+  }
 
-    avatarBtn.disabled = true;
-    avatarBtn.textContent = 'Upload…';
-    avatarMsg.classList.add('hidden');
+  avatarInput.addEventListener('change', () => showFilePreview(avatarInput.files?.[0]));
 
-    const fd = new FormData();
-    fd.append('avatar', file);
-
-    try {
-      const res = await fetch(`${pbUrl}/api/collections/users/records/${userId}`, { method: 'PATCH', body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        showAvatarMsg(data.message ?? 'Erreur upload.', false);
-      } else {
-        showAvatarMsg('Photo mise à jour !', true);
-        setTimeout(() => window.location.reload(), 800);
-      }
-    } catch {
-      showAvatarMsg('Erreur réseau.', false);
-    } finally {
-      avatarBtn.disabled = false;
-      avatarBtn.textContent = 'Mettre à jour';
+  avatarDrop.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    avatarDrop.style.borderColor = 'rgba(255,255,255,0.4)';
+    avatarDrop.style.background = 'rgba(255,255,255,0.05)';
+  });
+  avatarDrop.addEventListener('dragleave', () => {
+    avatarDrop.style.borderColor = 'rgba(255,255,255,0.12)';
+    avatarDrop.style.background = 'rgba(255,255,255,0.02)';
+  });
+  avatarDrop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    avatarDrop.style.borderColor = 'rgba(255,255,255,0.12)';
+    avatarDrop.style.background = 'rgba(255,255,255,0.02)';
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      avatarInput.files = dt.files;
+      showFilePreview(file);
     }
   });
 
-  function showAvatarMsg(msg, ok) {
-    avatarMsg.textContent = msg;
-    avatarMsg.style.cssText = ok
+  document.getElementById('avatar-form')?.addEventListener('submit', () => {
+    avatarBtn.disabled = true;
+    avatarBtn.textContent = 'Upload en cours…';
+  });
+
+  // ---- Password ----
+  function showMsg(el, msg, ok) {
+    el.textContent = msg;
+    el.style.cssText = ok
       ? 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.8);'
       : 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:rgba(255,255,255,.65);';
-    avatarMsg.className = 'mt-3 text-sm p-3 rounded-lg';
+    el.className = 'mt-3 text-sm p-3 rounded-xl';
   }
+
+  const pwdBtn = document.getElementById('pwd-btn');
+  const pwdError = document.getElementById('pwd-error');
+  const pwdSuccess = document.getElementById('pwd-success');
+
+  pwdBtn.addEventListener('click', async () => {
+    const oldPassword = document.getElementById('pwd-old').value;
+    const password = document.getElementById('pwd-new').value;
+    const passwordConfirm = document.getElementById('pwd-confirm').value;
+
+    pwdError.classList.add('hidden');
+    pwdSuccess.classList.add('hidden');
+
+    if (!oldPassword || !password || !passwordConfirm) {
+      pwdError.textContent = 'Tous les champs sont requis.';
+      pwdError.classList.remove('hidden');
+      return;
+    }
+    if (password !== passwordConfirm) {
+      pwdError.textContent = 'Les nouveaux mots de passe ne correspondent pas.';
+      pwdError.classList.remove('hidden');
+      return;
+    }
+    if (password.length < 8) {
+      pwdError.textContent = 'Le mot de passe doit faire au moins 8 caractères.';
+      pwdError.classList.remove('hidden');
+      return;
+    }
+
+    pwdBtn.disabled = true;
+    pwdBtn.textContent = 'Mise à jour…';
+
+    try {
+      const res = await authFetch(`${pbUrl}/api/collections/users/records/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword, password, passwordConfirm }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        pwdError.textContent = data.message ?? 'Erreur lors du changement de mot de passe.';
+        pwdError.classList.remove('hidden');
+      } else {
+        pwdSuccess.textContent = 'Mot de passe changé ! Reconnexion…';
+        pwdSuccess.classList.remove('hidden');
+        setTimeout(() => {
+          document.cookie = 'pb_auth=; path=/; max-age=0; SameSite=Strict';
+          window.location.href = '/login';
+        }, 1500);
+      }
+    } catch {
+      pwdError.textContent = 'Erreur réseau.';
+      pwdError.classList.remove('hidden');
+    } finally {
+      pwdBtn.disabled = false;
+      pwdBtn.textContent = 'Changer le mot de passe';
+    }
+  });
 
   document.querySelectorAll('.delete-stock-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const id = e.currentTarget.dataset.id;
       if (!confirm('Supprimer cet article ?')) return;
       try {
-        const res = await fetch(`${pbUrl}/api/collections/stockage/records/${id}`, { method: 'DELETE' });
+        const res = await authFetch(`${pbUrl}/api/collections/stockage/records/${id}`, { method: 'DELETE' });
         if (res.ok || res.status === 204) {
           e.currentTarget.closest('.stock-row')?.remove();
         } else {

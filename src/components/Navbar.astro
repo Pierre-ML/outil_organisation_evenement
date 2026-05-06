@@ -1,4 +1,6 @@
 ---
+import logoUrl from '../assets/icons/logo.svg?url';
+
 interface Props {
   user: Record<string, any>;
 }
@@ -20,7 +22,9 @@ const navLinks = [
 <nav class="fixed top-0 left-0 right-0 z-50" style="background: rgba(14,14,14,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06);">
   <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
     <!-- Logo -->
-    <a href="/dashboard" class="text-lg font-black tracking-tight text-white">SoiréeApp</a>
+    <a href="/dashboard" class="flex items-center">
+      <img src={logoUrl} alt="Logo" class="h-6" style="filter: brightness(1);" />
+    </a>
 
     <!-- Desktop nav -->
     <div class="hidden sm:flex items-center gap-1">

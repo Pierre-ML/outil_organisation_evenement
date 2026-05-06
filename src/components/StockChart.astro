@@ -12,7 +12,7 @@ const total = alcool + soft + drogue + manger;
 const chartData = {
   labels: [`Alcool (${alcool})`, `Soft (${soft})`, `Drogue (${drogue})`, `Manger (${manger})`],
   data: [alcool, soft, drogue, manger],
-  colors: ['#ffffff', '#888888', '#555555', '#333333'],
+  colors: ['#93c5fd', '#86efac', '#c4b5fd', '#fcd34d'],
 };
 ---
 
@@ -26,10 +26,10 @@ const chartData = {
       </div>
       <div class="grid grid-cols-2 gap-2 mt-2">
         {[
-          { label: 'Alcool', color: '#ffffff', count: alcool },
-          { label: 'Soft', color: '#888888', count: soft },
-          { label: 'Drogue', color: '#555555', count: drogue },
-          { label: 'Manger', color: '#333333', count: manger },
+          { label: 'Alcool', color: '#93c5fd', count: alcool },
+          { label: 'Soft', color: '#86efac', count: soft },
+          { label: 'Drogue', color: '#c4b5fd', count: drogue },
+          { label: 'Manger', color: '#fcd34d', count: manger },
         ].map(item => (
           <div class="flex items-center gap-2">
             <div class="w-2.5 h-2.5 rounded-full shrink-0" style={`background: ${item.color}`}></div>
