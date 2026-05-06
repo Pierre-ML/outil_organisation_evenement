@@ -23,8 +23,7 @@ const { title, description = 'Organise tes soirées entre amis.', user } = Astro
       href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-     <!-- Favicon -->
- <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <style is:global>
       @import "../styles/global.css";
@@ -32,8 +31,14 @@ const { title, description = 'Organise tes soirées entre amis.', user } = Astro
   </head>
   <body>
     {user && <Navbar user={user} />}
-    <main class={user ? 'pt-20 px-4 max-w-6xl mx-auto pb-16' : ''}>
+
+    <!-- Animated background -->
+    <canvas id="bg-canvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+    <main style="position:relative;z-index:1;" class={user ? 'pt-20 px-4 max-w-6xl mx-auto pb-16' : ''}>
       <slot />
     </main>
   </body>
 </html>
+
+<script src="../js/bg.js"></script>

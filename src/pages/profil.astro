@@ -16,34 +16,9 @@ try {
   return Astro.redirect('/login');
 }
 
-const pb = new PocketBase(import.meta.env.POCKETBASE_URL);
+const pb = new PocketBase(import.meta.env.PUBLIC_POCKETBASE_URL);
 pb.authStore.save(token, user as any);
 if (!pb.authStore.isValid) return Astro.redirect('/login');
-
-// Handle avatar upload server-side
-let avatarError = '';
-if (Astro.request.method === 'POST') {
-  try {
-    const formData = await Astro.request.formData();
-    const file = formData.get('avatar');
-    if (file instanceof File && file.size > 0) {
-      const fd = new FormData();
-      fd.append('avatar', file);
-      const updated = await pb.collection('users').update(user.id, fd);
-      Astro.cookies.set('pb_auth', JSON.stringify({ token, record: updated }), {
-        path: '/',
-        maxAge: 604800,
-        sameSite: 'strict',
-        httpOnly: false,
-      });
-      return Astro.redirect('/profil');
-    } else {
-      avatarError = 'Sélectionne une image.';
-    }
-  } catch (e: any) {
-    avatarError = e?.message ?? 'Erreur lors de l\'upload.';
-  }
-}
 
 const TYPE_LABELS: Record<string, string> = { alcool: 'Alcool', soft: 'Soft', drogue: 'Drogue', manger: 'Manger' };
 const TYPE_INITIALS: Record<string, string> = { alcool: 'A', soft: 'S', drogue: 'D', manger: 'M' };
@@ -53,8 +28,8 @@ try {
   myStock = await pb.collection('stockage').getFullList({ filter: `qui = "${user.id}"`, sort: '-created' });
 } catch {}
 
-const pbUrl = import.meta.env.POCKETBASE_URL;
-const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}` : null;
+const pbUrl = import.meta.env.PUBLIC_POCKETBASE_URL;
+const avatarUrl = user.avatar ? `${pbUrl}/api/files/${user.collectionName ?? '_pb_users_auth_'}/${user.id}/${user.avatar}` : null;
 ---
 
 <Layout title="Mon profil" user={user}>
@@ -81,7 +56,7 @@ const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avat
         </div>
       </div>
 
-      <form method="POST" enctype="multipart/form-data" id="avatar-form">
+      <form id="avatar-form">
         <label class="label mb-2 block">Photo de profil</label>
         <input type="file" id="avatar-input" name="avatar" accept="image/*" class="sr-only" />
         <div id="avatar-drop" class="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl cursor-pointer transition-all" style="border:2px dashed rgba(255,255,255,0.12);background:rgba(255,255,255,0.02);" onclick="document.getElementById('avatar-input').click()">
@@ -94,9 +69,8 @@ const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avat
           </div>
           <div id="avatar-drop-name" class="hidden text-xs text-white/40 text-center"></div>
         </div>
-        {avatarError && (
-          <div class="mt-3 text-sm p-3 rounded-xl" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgba(255,255,255,0.65);">{avatarError}</div>
-        )}
+        <div id="avatar-error" class="hidden mt-3 text-sm p-3 rounded-xl" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgba(255,255,255,0.65);"></div>
+        <div id="avatar-success" class="hidden mt-3 text-sm p-3 rounded-xl" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);"></div>
         <button type="submit" id="avatar-btn" class="mt-3 w-full py-2.5 rounded-full text-sm font-medium text-black grad-btn">Mettre à jour la photo</button>
       </form>
     </div>
@@ -159,144 +133,5 @@ const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avat
   </div>
 </Layout>
 
-<script is:inline define:vars={{ userId: user.id, pbUrl, authToken: token }}>
-  function authFetch(url, opts = {}) {
-    const headers = { Authorization: `Bearer ${authToken}`, ...(opts.headers ?? {}) };
-    return fetch(url, { ...opts, headers });
-  }
-
-  // ---- Avatar drag & drop preview (submit = form POST) ----
-  const avatarInput = document.getElementById('avatar-input');
-  const avatarDrop = document.getElementById('avatar-drop');
-  const avatarDropPreview = document.getElementById('avatar-drop-preview');
-  const avatarDropPlaceholder = document.getElementById('avatar-drop-placeholder');
-  const avatarDropName = document.getElementById('avatar-drop-name');
-  const avatarBtn = document.getElementById('avatar-btn');
-
-  function showFilePreview(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      avatarDropPreview.src = e.target.result;
-      avatarDropPreview.classList.remove('hidden');
-      avatarDropPlaceholder.classList.add('hidden');
-      avatarDropName.textContent = file.name;
-      avatarDropName.classList.remove('hidden');
-      avatarDrop.style.borderColor = 'rgba(255,255,255,0.3)';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  avatarInput.addEventListener('change', () => showFilePreview(avatarInput.files?.[0]));
-
-  avatarDrop.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    avatarDrop.style.borderColor = 'rgba(255,255,255,0.4)';
-    avatarDrop.style.background = 'rgba(255,255,255,0.05)';
-  });
-  avatarDrop.addEventListener('dragleave', () => {
-    avatarDrop.style.borderColor = 'rgba(255,255,255,0.12)';
-    avatarDrop.style.background = 'rgba(255,255,255,0.02)';
-  });
-  avatarDrop.addEventListener('drop', (e) => {
-    e.preventDefault();
-    avatarDrop.style.borderColor = 'rgba(255,255,255,0.12)';
-    avatarDrop.style.background = 'rgba(255,255,255,0.02)';
-    const file = e.dataTransfer?.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      avatarInput.files = dt.files;
-      showFilePreview(file);
-    }
-  });
-
-  document.getElementById('avatar-form')?.addEventListener('submit', () => {
-    avatarBtn.disabled = true;
-    avatarBtn.textContent = 'Upload en cours…';
-  });
-
-  // ---- Password ----
-  function showMsg(el, msg, ok) {
-    el.textContent = msg;
-    el.style.cssText = ok
-      ? 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.8);'
-      : 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:rgba(255,255,255,.65);';
-    el.className = 'mt-3 text-sm p-3 rounded-xl';
-  }
-
-  const pwdBtn = document.getElementById('pwd-btn');
-  const pwdError = document.getElementById('pwd-error');
-  const pwdSuccess = document.getElementById('pwd-success');
-
-  pwdBtn.addEventListener('click', async () => {
-    const oldPassword = document.getElementById('pwd-old').value;
-    const password = document.getElementById('pwd-new').value;
-    const passwordConfirm = document.getElementById('pwd-confirm').value;
-
-    pwdError.classList.add('hidden');
-    pwdSuccess.classList.add('hidden');
-
-    if (!oldPassword || !password || !passwordConfirm) {
-      pwdError.textContent = 'Tous les champs sont requis.';
-      pwdError.classList.remove('hidden');
-      return;
-    }
-    if (password !== passwordConfirm) {
-      pwdError.textContent = 'Les nouveaux mots de passe ne correspondent pas.';
-      pwdError.classList.remove('hidden');
-      return;
-    }
-    if (password.length < 8) {
-      pwdError.textContent = 'Le mot de passe doit faire au moins 8 caractères.';
-      pwdError.classList.remove('hidden');
-      return;
-    }
-
-    pwdBtn.disabled = true;
-    pwdBtn.textContent = 'Mise à jour…';
-
-    try {
-      const res = await authFetch(`${pbUrl}/api/collections/users/records/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldPassword, password, passwordConfirm }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        pwdError.textContent = data.message ?? 'Erreur lors du changement de mot de passe.';
-        pwdError.classList.remove('hidden');
-      } else {
-        pwdSuccess.textContent = 'Mot de passe changé ! Reconnexion…';
-        pwdSuccess.classList.remove('hidden');
-        setTimeout(() => {
-          document.cookie = 'pb_auth=; path=/; max-age=0; SameSite=Strict';
-          window.location.href = '/login';
-        }, 1500);
-      }
-    } catch {
-      pwdError.textContent = 'Erreur réseau.';
-      pwdError.classList.remove('hidden');
-    } finally {
-      pwdBtn.disabled = false;
-      pwdBtn.textContent = 'Changer le mot de passe';
-    }
-  });
-
-  document.querySelectorAll('.delete-stock-btn').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.currentTarget.dataset.id;
-      if (!confirm('Supprimer cet article ?')) return;
-      try {
-        const res = await authFetch(`${pbUrl}/api/collections/stockage/records/${id}`, { method: 'DELETE' });
-        if (res.ok || res.status === 204) {
-          e.currentTarget.closest('.stock-row')?.remove();
-        } else {
-          alert('Erreur lors de la suppression.');
-        }
-      } catch {
-        alert('Erreur réseau.');
-      }
-    });
-  });
-</script>
+<div id="__vars" data-pb-url={pbUrl} data-user-id={user.id} data-auth-token={token} aria-hidden="true" style="display:none"></div>
+<script src="../js/profil.js"></script>

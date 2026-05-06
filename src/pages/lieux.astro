@@ -17,7 +17,7 @@ try {
   return Astro.redirect('/login');
 }
 
-const pb = new PocketBase(import.meta.env.POCKETBASE_URL);
+const pb = new PocketBase(import.meta.env.PUBLIC_POCKETBASE_URL);
 pb.authStore.save(token, user as any);
 if (!pb.authStore.isValid) return Astro.redirect('/login');
 
@@ -34,7 +34,7 @@ try {
 const canSee = user.admin || lieux.length > 0;
 const activeLieu = lieux.find((l) => l.active) ?? lieux[0] ?? null;
 
-const pbUrl = import.meta.env.POCKETBASE_URL;
+const pbUrl = import.meta.env.PUBLIC_POCKETBASE_URL;
 ---
 
 <Layout title="Lieux" user={user}>

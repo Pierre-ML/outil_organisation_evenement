@@ -16,7 +16,7 @@ try {
   return Astro.redirect('/login');
 }
 
-const pb = new PocketBase(import.meta.env.POCKETBASE_URL);
+const pb = new PocketBase(import.meta.env.PUBLIC_POCKETBASE_URL);
 pb.authStore.save(token, user as any);
 if (!pb.authStore.isValid) return Astro.redirect('/login');
 
@@ -31,8 +31,8 @@ try {
   };
 } catch {}
 
-const pbUrl = import.meta.env.POCKETBASE_URL;
-const avatarUrl = user.avatar ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}` : null;
+const pbUrl = import.meta.env.PUBLIC_POCKETBASE_URL;
+const avatarUrl = user.avatar ? `${pbUrl}/api/files/${user.collectionName ?? '_pb_users_auth_'}/${user.id}/${user.avatar}` : null;
 ---
 
 <Layout title="Dashboard" user={user}>

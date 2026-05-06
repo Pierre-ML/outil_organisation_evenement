@@ -13,7 +13,7 @@ interface Props {
 
 const { user, pbUrl, onDelete = false } = Astro.props;
 const avatarUrl = user.avatar
-  ? `${pbUrl}/api/files/users/${user.id}/${user.avatar}`
+  ? `${pbUrl}/api/files/${(user as any).collectionName ?? '_pb_users_auth_'}/${user.id}/${user.avatar}`
   : null;
 ---
 
