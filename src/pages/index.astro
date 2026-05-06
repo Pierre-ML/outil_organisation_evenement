@@ -1,35 +1,33 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getAuthFromCookies } from '../lib/auth';
 
-const auth = getAuthFromCookies(Astro.cookies);
-if (auth) return Astro.redirect('/dashboard');
+const raw = Astro.cookies.get('pb_auth')?.value;
+if (raw) return Astro.redirect('/dashboard');
 ---
 
 <Layout title="Accueil" description="Organise tes soirées entre amis avec SoiréeApp.">
-  <!-- Particles canvas -->
+  <!-- Particles -->
   <div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-    <canvas id="particles" style="position:absolute;inset:0;opacity:0.35;"></canvas>
+    <canvas id="particles" style="position:absolute;inset:0;opacity:0.2;"></canvas>
   </div>
 
   <!-- Hero -->
   <section class="relative min-h-screen flex flex-col items-center justify-center px-4 text-center">
     <div class="animate-fade-in">
-      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium mb-8"
-           style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;">
-        ✨ Réservé aux amis
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8 tracking-widest uppercase" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
+        Réservé aux amis
       </div>
 
-      <h1 class="text-5xl sm:text-7xl font-black mb-6 leading-tight tracking-tight">
-        <span class="grad-text">SoiréeApp</span>
+      <h1 class="text-5xl sm:text-7xl font-black mb-6 leading-none tracking-tight text-white">
+        SoiréeApp
       </h1>
-      <p class="text-gray-400 text-lg sm:text-xl mb-10 max-w-lg mx-auto leading-relaxed">
+      <p class="text-white/45 text-lg sm:text-xl mb-10 max-w-lg mx-auto leading-relaxed">
         Organise tes soirées entre amis. Stock, lieux, et coordination — tout en un seul endroit.
       </p>
 
       <a
         href="/login"
-        class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white font-semibold text-base grad-btn"
+        class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm text-black font-semibold grad-btn"
       >
         Se connecter
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -38,10 +36,9 @@ if (auth) return Astro.redirect('/dashboard');
       </a>
     </div>
 
-    <!-- Scroll hint -->
     <div class="absolute bottom-10 flex flex-col items-center gap-2 animate-fade-in-delay2">
-      <span class="text-xs text-gray-600">Défiler</span>
-      <div class="w-0.5 h-8 rounded-full" style="background: linear-gradient(to bottom, rgba(139,92,246,0.5), transparent);"></div>
+      <span class="text-xs text-white/20 tracking-widest uppercase">Défiler</span>
+      <div class="w-px h-8 rounded-full" style="background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);"></div>
     </div>
   </section>
 
@@ -49,47 +46,22 @@ if (auth) return Astro.redirect('/dashboard');
   <section class="relative py-24 px-4">
     <div class="max-w-5xl mx-auto">
       <div class="text-center mb-16 animate-fade-in-delay">
-        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Comment ça marche ?</h2>
-        <p class="text-gray-500 text-lg">Simple, rapide, efficace.</p>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-white">Comment ça marche ?</h2>
+        <p class="text-white/40 text-base">Simple, rapide, efficace.</p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          {
-            icon: '🔐',
-            step: '01',
-            title: 'Connexion',
-            desc: "Accède avec les identifiants fournis par l'admin. Pas d'inscription publique.",
-          },
-          {
-            icon: '📦',
-            step: '02',
-            title: 'Stock',
-            desc: 'Renseigne ce que tu ramènes : alcool, soft, manger… Tout est centralisé.',
-          },
-          {
-            icon: '📍',
-            step: '03',
-            title: 'Lieu',
-            desc: "Découvre l'adresse de la soirée quand l'admin la révèle. Carte interactive.",
-          },
-          {
-            icon: '🎉',
-            step: '04',
-            title: 'Soirée',
-            desc: 'Profite de la soirée, tout est organisé !',
-          },
+          { step: '01', title: 'Connexion', desc: "Accède avec les identifiants fournis par l'admin. Pas d'inscription publique." },
+          { step: '02', title: 'Stock', desc: 'Renseigne ce que tu ramènes : alcool, soft, manger… Tout est centralisé.' },
+          { step: '03', title: 'Lieu', desc: "Découvre l'adresse quand l'admin la révèle. Carte interactive incluse." },
+          { step: '04', title: 'Soirée', desc: 'Profite de la soirée, tout est organisé !' },
         ].map((card) => (
-          <div
-            class="glass-card p-6 rounded-2xl flex flex-col gap-4 hover:-translate-y-1 transition-transform duration-300"
-          >
-            <div class="flex items-start justify-between">
-              <div class="text-3xl">{card.icon}</div>
-              <span class="text-xs font-mono text-gray-700">{card.step}</span>
-            </div>
+          <div class="glass-card p-6 rounded-2xl flex flex-col gap-3 hover:-translate-y-1 transition-transform duration-300">
+            <span class="text-5xl font-black text-white/8 leading-none">{card.step}</span>
             <div>
-              <h3 class="font-semibold text-base mb-1">{card.title}</h3>
-              <p class="text-gray-500 text-sm leading-relaxed">{card.desc}</p>
+              <h3 class="font-semibold text-base mb-1 text-white">{card.title}</h3>
+              <p class="text-white/40 text-sm leading-relaxed">{card.desc}</p>
             </div>
           </div>
         ))}
@@ -100,9 +72,9 @@ if (auth) return Astro.redirect('/dashboard');
   <!-- CTA -->
   <section class="py-20 px-4 text-center">
     <div class="max-w-xl mx-auto glass-card p-10 rounded-3xl">
-      <h2 class="text-2xl font-bold mb-3">Prêt pour la soirée ?</h2>
-      <p class="text-gray-500 mb-8">Connecte-toi et commence à organiser.</p>
-      <a href="/login" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-semibold grad-btn">
+      <h2 class="text-2xl font-bold mb-3 text-white">Prêt pour la soirée ?</h2>
+      <p class="text-white/40 mb-8">Connecte-toi et commence à organiser.</p>
+      <a href="/login" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-black grad-btn">
         Se connecter
       </a>
     </div>
@@ -110,7 +82,7 @@ if (auth) return Astro.redirect('/dashboard');
 
   <!-- Footer -->
   <footer class="py-8 px-4 text-center" style="border-top: 1px solid rgba(255,255,255,0.05);">
-    <p class="text-gray-700 text-sm">SoiréeApp — Fait pour les soirées entre amis</p>
+    <p class="text-white/20 text-sm">SoiréeApp — Fait pour les soirées entre amis</p>
   </footer>
 </Layout>
 
@@ -125,13 +97,13 @@ if (auth) return Astro.redirect('/dashboard');
   resize();
   window.addEventListener('resize', resize);
 
-  const particles = Array.from({ length: 70 }, () => ({
+  const particles = Array.from({ length: 60 }, () => ({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
-    vx: (Math.random() - 0.5) * 0.25,
-    vy: (Math.random() - 0.5) * 0.25,
-    r: Math.random() * 1.8 + 0.4,
-    a: Math.random() * 0.45 + 0.1,
+    vx: (Math.random() - 0.5) * 0.2,
+    vy: (Math.random() - 0.5) * 0.2,
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random() * 0.35 + 0.05,
   }));
 
   function draw() {
@@ -139,8 +111,7 @@ if (auth) return Astro.redirect('/dashboard');
     for (const p of particles) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      const hue = Math.random() > 0.5 ? '139, 92, 246' : '236, 72, 153';
-      ctx.fillStyle = `rgba(${hue}, ${p.a})`;
+      ctx.fillStyle = `rgba(255, 255, 255, ${p.a})`;
       ctx.fill();
       p.x += p.vx;
       p.y += p.vy;

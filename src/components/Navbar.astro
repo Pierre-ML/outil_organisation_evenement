@@ -1,8 +1,6 @@
 ---
-import type { AuthUser } from '../lib/auth';
-
 interface Props {
-  user: AuthUser;
+  user: Record<string, any>;
 }
 
 const { user } = Astro.props;
@@ -19,10 +17,10 @@ const navLinks = [
 ];
 ---
 
-<nav class="fixed top-0 left-0 right-0 z-50" style="background: rgba(10,10,10,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.07);">
-  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+<nav class="fixed top-0 left-0 right-0 z-50" style="background: rgba(14,14,14,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06);">
+  <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
     <!-- Logo -->
-    <a href="/dashboard" class="text-xl font-black grad-text">SoiréeApp</a>
+    <a href="/dashboard" class="text-lg font-black tracking-tight text-white">SoiréeApp</a>
 
     <!-- Desktop nav -->
     <div class="hidden sm:flex items-center gap-1">
@@ -31,8 +29,8 @@ const navLinks = [
           href={href}
           class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPath === href
-              ? 'text-white bg-white/10'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              ? 'text-white bg-white/8'
+              : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}
         >
           {label}
@@ -43,8 +41,8 @@ const navLinks = [
           href="/admin"
           class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPath === '/admin'
-              ? 'text-violet-300 bg-violet-500/20'
-              : 'text-violet-400 hover:text-violet-300 hover:bg-violet-500/10'
+              ? 'text-white bg-white/8'
+              : 'text-white/40 hover:text-white hover:bg-white/5'
           }`}
         >
           Admin
@@ -54,23 +52,24 @@ const navLinks = [
 
     <!-- Desktop right -->
     <div class="hidden sm:flex items-center gap-3">
-      <a href="/profil" class="flex items-center gap-2 group">
+      <a href="/profil" class="flex items-center gap-2.5 group">
         {avatarUrl ? (
           <img
             src={avatarUrl}
             alt={user.name}
-            class="w-8 h-8 rounded-full object-cover border border-white/20 group-hover:border-violet-500/50 transition-colors"
+            class="w-8 h-8 rounded-full object-cover"
+            style="border: 1px solid rgba(255,255,255,0.12);"
           />
         ) : (
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12);">
             {user.name?.[0]?.toUpperCase() ?? 'U'}
           </div>
         )}
-        <span class="text-sm text-gray-300 group-hover:text-white transition-colors">{user.name}</span>
+        <span class="text-sm text-white/55 group-hover:text-white transition-colors">{user.name}</span>
       </a>
       <button
         id="logout-btn"
-        class="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+        class="px-3 py-1.5 rounded-lg text-sm text-white/30 hover:text-white/70 transition-colors"
       >
         Déconnexion
       </button>
@@ -79,9 +78,9 @@ const navLinks = [
     <!-- Mobile hamburger -->
     <button id="hamburger" class="sm:hidden p-2 rounded-lg hover:bg-white/5 transition-colors" aria-label="Menu">
       <div class="w-5 space-y-1.5">
-        <span class="block h-0.5 bg-white rounded transition-all" id="h-line1"></span>
-        <span class="block h-0.5 bg-white rounded transition-all" id="h-line2"></span>
-        <span class="block h-0.5 bg-white rounded transition-all" id="h-line3"></span>
+        <span class="block h-0.5 bg-white/60 rounded transition-all" id="h-line1"></span>
+        <span class="block h-0.5 bg-white/60 rounded transition-all" id="h-line2"></span>
+        <span class="block h-0.5 bg-white/60 rounded transition-all" id="h-line3"></span>
       </div>
     </button>
   </div>
@@ -90,25 +89,25 @@ const navLinks = [
   <div
     id="mobile-menu"
     class="sm:hidden hidden px-4 pb-4"
-    style="background: rgba(13,13,13,0.98); border-top: 1px solid rgba(255,255,255,0.07);"
+    style="background: rgba(14,14,14,0.98); border-top: 1px solid rgba(255,255,255,0.06);"
   >
     <div class="flex flex-col gap-1 pt-3">
       {navLinks.map(({ href, label }) => (
-        <a href={href} class="px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition-colors font-medium">
+        <a href={href} class="px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors font-medium">
           {label}
         </a>
       ))}
       {user.admin && (
-        <a href="/admin" class="px-4 py-3 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors font-medium">
+        <a href="/admin" class="px-4 py-3 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors font-medium">
           Admin
         </a>
       )}
-      <a href="/profil" class="px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition-colors font-medium">
+      <a href="/profil" class="px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors font-medium">
         Mon profil
       </a>
       <button
         id="logout-btn-mobile"
-        class="text-left px-4 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-medium"
+        class="text-left px-4 py-3 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors font-medium"
       >
         Déconnexion
       </button>
@@ -126,12 +125,9 @@ const navLinks = [
     mobileMenu.classList.toggle('hidden', !menuOpen);
   });
 
-  async function logout() {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } finally {
-      window.location.href = '/login';
-    }
+  function logout() {
+    document.cookie = 'pb_auth=; path=/; max-age=0; SameSite=Strict';
+    window.location.href = '/login';
   }
 
   document.getElementById('logout-btn')?.addEventListener('click', logout);

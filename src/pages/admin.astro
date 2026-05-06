@@ -1,17 +1,17 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 
-const auth = Astro.locals.auth!;
 const pb = Astro.locals.pb!;
-const user = auth.model;
+const user = Astro.locals.user!;
 
 const TYPE_LABELS: Record<string, string> = { alcool: 'Alcool', soft: 'Soft', drogue: 'Drogue', manger: 'Manger' };
-const TYPE_ICONS: Record<string, string> = { alcool: '🍺', soft: '🥤', drogue: '💊', manger: '🍕' };
+const TYPE_INITIALS: Record<string, string> = { alcool: 'A', soft: 'S', drogue: 'D', manger: 'M' };
 
 let allUsers: any[] = [];
 let lieux: any[] = [];
 let allStock: any[] = [];
 let lieuxVisible = false;
+let settingsId = '';
 let usersMap: Record<string, string> = {};
 
 try {
@@ -31,7 +31,9 @@ try {
 
 try {
   const settings = await pb.collection('settings').getList(1, 10, { filter: 'key = "lieux_visible"' });
-  lieuxVisible = settings.items.some((s) => s.value === 'true');
+  const item = settings.items.find((s: any) => s.key === 'lieux_visible');
+  lieuxVisible = item?.value === 'true';
+  settingsId = item?.id ?? '';
 } catch {}
 
 const pbUrl = import.meta.env.POCKETBASE_URL;
@@ -39,39 +41,34 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
 <AuthLayout title="Administration" user={user}>
   <div class="py-8">
-    <div class="flex items-center gap-3 mb-8">
-      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.25);">
-        ⚙️
-      </div>
-      <div>
-        <h1 class="text-3xl font-bold">Administration</h1>
-        <p class="text-gray-500 text-sm">Gestion des utilisateurs, lieux et stock.</p>
-      </div>
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white">Administration</h1>
+      <p class="text-white/40 text-sm mt-1">Gestion des utilisateurs, lieux et stock.</p>
     </div>
 
-    <div class="space-y-8">
+    <div class="space-y-6">
 
       <!-- ============ LIEUX VISIBILITY ============ -->
       <section class="glass-card p-6 rounded-2xl">
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h2 class="text-lg font-semibold mb-1">Visibilité des lieux</h2>
-            <p class="text-gray-500 text-sm">
-              Contrôle si les utilisateurs peuvent voir la page Lieux.
-              Actuellement : <span id="visibility-label" class={lieuxVisible ? 'text-green-400' : 'text-red-400'}>
+            <h2 class="text-base font-semibold mb-1 text-white">Visibilité des lieux</h2>
+            <p class="text-white/40 text-sm">
+              Actuellement :
+              <span id="visibility-label" class={lieuxVisible ? 'text-white/80' : 'text-white/30'}>
                 {lieuxVisible ? 'Activée' : 'Désactivée'}
               </span>
             </p>
           </div>
           <button
             id="toggle-visibility-btn"
-            class="px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+            class="px-5 py-2.5 rounded-full font-medium text-sm transition-all"
             style={lieuxVisible
-              ? 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171;'
-              : 'background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80;'}
+              ? 'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7);'
+              : 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.4);'}
             data-current={lieuxVisible ? 'true' : 'false'}
           >
-            {lieuxVisible ? '🔒 Masquer les lieux' : '🔓 Révéler les lieux'}
+            {lieuxVisible ? 'Masquer les lieux' : 'Révéler les lieux'}
           </button>
         </div>
         <div id="visibility-msg" class="hidden mt-4 text-sm p-3 rounded-xl"></div>
@@ -79,13 +76,13 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
       <!-- ============ USERS ============ -->
       <section class="glass-card p-6 rounded-2xl">
-        <h2 class="text-lg font-semibold mb-5">Utilisateurs ({allUsers.length})</h2>
+        <h2 class="text-base font-semibold mb-5 text-white">Utilisateurs <span class="text-white/30 font-normal">({allUsers.length})</span></h2>
 
         <!-- Create user form -->
         <div class="mb-6 p-5 rounded-xl" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-          <h3 class="font-medium mb-4 text-sm text-gray-300">Créer un compte</h3>
-          <div id="create-user-error" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;"></div>
-          <div id="create-user-success" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;"></div>
+          <h3 class="font-medium mb-4 text-sm text-white/60">Créer un compte</h3>
+          <div id="create-user-error" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: rgba(255,255,255,0.65);"></div>
+          <div id="create-user-success" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.8);"></div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
@@ -98,49 +95,53 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
             </div>
             <div>
               <label class="label" for="new-password">Mot de passe</label>
-              <input type="password" id="new-password" placeholder="Min. 8 caractères" class="input-field" />
+              <input type="password" id="new-password" placeholder="••••••••" class="input-field" />
+            </div>
+            <div>
+              <label class="label" for="new-password-confirm">Confirmer</label>
+              <input type="password" id="new-password-confirm" placeholder="••••••••" class="input-field" />
             </div>
             <div class="flex items-end">
               <label class="flex items-center gap-3 cursor-pointer select-none">
                 <div class="relative">
                   <input type="checkbox" id="new-admin" class="sr-only peer" />
-                  <div class="w-10 h-5 rounded-full transition-colors peer-checked:bg-violet-600" style="background: rgba(255,255,255,0.1);"></div>
-                  <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  <div class="w-9 h-5 rounded-full transition-colors peer-checked:bg-white/80" style="background: rgba(255,255,255,0.1);"></div>
+                  <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4" style="background:rgba(255,255,255,0.5);"></div>
                 </div>
-                <span class="text-sm text-gray-300">Rôle admin</span>
+                <span class="text-sm text-white/50">Rôle admin</span>
               </label>
             </div>
           </div>
-          <button id="create-user-btn" class="px-5 py-2.5 rounded-xl text-sm grad-btn">
+          <button id="create-user-btn" class="px-5 py-2.5 rounded-full text-sm text-black grad-btn">
             Créer le compte
           </button>
         </div>
 
         <!-- Users list -->
-        <div id="users-list" class="space-y-3">
+        <div id="users-list" class="space-y-2">
           {allUsers.map((u) => {
             const avatarUrl = u.avatar ? `${pbUrl}/api/files/users/${u.id}/${u.avatar}` : null;
             return (
               <div class="flex items-center gap-3 p-3 rounded-xl user-row" style="background: rgba(255,255,255,0.02);" data-id={u.id}>
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={u.name} class="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  <img src={avatarUrl} alt={u.name} class="w-9 h-9 rounded-xl object-cover shrink-0" />
                 ) : (
-                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0" style="background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
                     {u.name?.[0]?.toUpperCase() ?? 'U'}
                   </div>
                 )}
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="font-medium text-sm truncate">{u.name}</span>
+                    <span class="font-medium text-sm truncate text-white">{u.name}</span>
                     {u.admin && (
-                      <span class="text-xs px-2 py-0.5 rounded-full" style="background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;">Admin</span>
+                      <span class="text-xs px-2 py-0.5 rounded-full tracking-wider uppercase font-medium" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.4);">Admin</span>
                     )}
                   </div>
-                  <div class="text-xs text-gray-500 truncate">{u.email}</div>
+                  <div class="text-xs text-white/30 truncate">{u.email}</div>
                 </div>
                 {u.id !== user.id && (
                   <button
-                    class="delete-user-btn shrink-0 p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    class="delete-user-btn shrink-0 p-2 rounded-lg text-white/20 hover:text-white/55 hover:bg-white/5 transition-colors"
                     data-id={u.id}
                     aria-label="Supprimer"
                   >
@@ -157,13 +158,13 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
       <!-- ============ LIEUX CRUD ============ -->
       <section class="glass-card p-6 rounded-2xl">
-        <h2 class="text-lg font-semibold mb-5">Lieux ({lieux.length})</h2>
+        <h2 class="text-base font-semibold mb-5 text-white">Lieux <span class="text-white/30 font-normal">({lieux.length})</span></h2>
 
         <!-- Create lieu form -->
         <div class="mb-6 p-5 rounded-xl" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-          <h3 class="font-medium mb-4 text-sm text-gray-300">Ajouter / modifier un lieu</h3>
-          <div id="lieu-error" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;"></div>
-          <div id="lieu-success" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;"></div>
+          <h3 class="font-medium mb-4 text-sm text-white/60">Ajouter / modifier un lieu</h3>
+          <div id="lieu-error" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: rgba(255,255,255,0.65);"></div>
+          <div id="lieu-success" class="hidden mb-3 p-3 rounded-lg text-sm" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.8);"></div>
 
           <input type="hidden" id="lieu-edit-id" value="" />
           <div class="space-y-3 mb-3">
@@ -177,38 +178,42 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
             </div>
             <div>
               <label class="label" for="lieu-img">Photo (optionnel)</label>
-              <input type="file" id="lieu-img" accept="image/*" class="w-full text-sm text-gray-400 cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium" style="file:background: rgba(139,92,246,0.15); file:color: #a78bfa;" />
+              <input type="file" id="lieu-img" accept="image/*" class="w-full text-sm text-white/30 cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium" style="file:background:rgba(255,255,255,.08);file:color:rgba(255,255,255,.55);" />
             </div>
           </div>
           <div class="flex gap-2">
-            <button id="save-lieu-btn" class="px-5 py-2.5 rounded-xl text-sm grad-btn">
+            <button id="save-lieu-btn" class="px-5 py-2.5 rounded-full text-sm text-black grad-btn">
               Enregistrer
             </button>
-            <button id="cancel-lieu-btn" class="hidden px-5 py-2.5 rounded-xl text-sm transition-colors" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #9ca3af;">
+            <button id="cancel-lieu-btn" class="hidden px-5 py-2.5 rounded-full text-sm transition-colors" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
               Annuler
             </button>
           </div>
         </div>
 
         <!-- Lieux list -->
-        <div id="lieux-list" class="space-y-3">
+        <div id="lieux-list" class="space-y-2">
           {lieux.length === 0 ? (
-            <p class="text-gray-500 text-sm text-center py-4">Aucun lieu enregistré.</p>
+            <p class="text-white/30 text-sm text-center py-4">Aucun lieu enregistré.</p>
           ) : (
             lieux.map((lieu) => (
               <div class="flex items-center gap-3 p-3 rounded-xl lieu-row" style="background: rgba(255,255,255,0.02);" data-id={lieu.id}>
                 {lieu.img ? (
-                  <img src={`${pbUrl}/api/files/lieux/${lieu.id}/${lieu.img}`} alt={lieu.nom} class="w-12 h-12 rounded-xl object-cover shrink-0" />
+                  <img src={`${pbUrl}/api/files/lieux/${lieu.id}/${lieu.img}`} alt={lieu.nom} class="w-11 h-11 rounded-xl object-cover shrink-0" />
                 ) : (
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background: rgba(255,255,255,0.05);">🏠</div>
+                  <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
                 )}
                 <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm truncate">{lieu.nom}</div>
-                  <div class="text-xs text-gray-500 truncate">{lieu.adresse}</div>
+                  <div class="font-medium text-sm truncate text-white">{lieu.nom}</div>
+                  <div class="text-xs text-white/30 truncate">{lieu.adresse}</div>
                 </div>
                 <div class="flex gap-1 shrink-0">
                   <button
-                    class="edit-lieu-btn p-2 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                    class="edit-lieu-btn p-2 rounded-lg text-white/20 hover:text-white/55 hover:bg-white/5 transition-colors"
                     data-id={lieu.id}
                     data-nom={lieu.nom}
                     data-adresse={lieu.adresse}
@@ -219,7 +224,7 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
                     </svg>
                   </button>
                   <button
-                    class="delete-lieu-btn p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    class="delete-lieu-btn p-2 rounded-lg text-white/20 hover:text-white/55 hover:bg-white/5 transition-colors"
                     data-id={lieu.id}
                     aria-label="Supprimer"
                   >
@@ -236,28 +241,27 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
       <!-- ============ STOCK GLOBAL ============ -->
       <section class="glass-card p-6 rounded-2xl">
-        <h2 class="text-lg font-semibold mb-5">Stock global ({allStock.length} articles)</h2>
+        <h2 class="text-base font-semibold mb-5 text-white">Stock global <span class="text-white/30 font-normal">({allStock.length} articles)</span></h2>
 
-        <!-- Filters -->
         <div class="flex gap-3 mb-4 flex-wrap">
           <select id="filter-type" class="select-field" style="width: auto;">
             <option value="">Tous les types</option>
-            <option value="alcool">🍺 Alcool</option>
-            <option value="soft">🥤 Soft</option>
-            <option value="drogue">💊 Drogue</option>
-            <option value="manger">🍕 Manger</option>
+            <option value="alcool">Alcool</option>
+            <option value="soft">Soft</option>
+            <option value="drogue">Drogue</option>
+            <option value="manger">Manger</option>
           </select>
           <input type="text" id="filter-user" placeholder="Filtrer par nom…" class="input-field" style="width: auto; flex: 1; min-width: 150px;" />
         </div>
 
-        <div class="overflow-x-auto rounded-xl" style="border: 1px solid rgba(255,255,255,0.07);">
+        <div class="overflow-x-auto rounded-xl" style="border: 1px solid rgba(255,255,255,0.06);">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.07);">
-                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
-                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Qté</th>
-                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Qui</th>
+              <tr style="background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <th class="text-left py-3 px-4 text-xs font-medium text-white/30 uppercase tracking-wider">Article</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-white/30 uppercase tracking-wider">Type</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-white/30 uppercase tracking-wider hidden sm:table-cell">Qté</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-white/30 uppercase tracking-wider">Qui</th>
               </tr>
             </thead>
             <tbody id="stock-table-body">
@@ -267,22 +271,22 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
                 const userName = usersMap[s.qui] ?? '?';
                 return (
                   <tr
-                    class="stock-table-row border-b hover:bg-white/[0.02] transition-colors"
-                    style="border-color: rgba(255,255,255,0.05);"
+                    class="stock-table-row border-b hover:bg-white/1.5 transition-colors"
+                    style="border-color: rgba(255,255,255,0.04);"
                     data-type={firstType}
                     data-user={userName.toLowerCase()}
                   >
-                    <td class="py-3 px-4 font-medium">{s.nom}</td>
-                    <td class="py-3 px-4 text-gray-400">{TYPE_ICONS[firstType]} {types.map((t: string) => TYPE_LABELS[t] ?? t).join(', ')}</td>
-                    <td class="py-3 px-4 text-gray-400 hidden sm:table-cell">×{s.combien}</td>
-                    <td class="py-3 px-4 text-gray-500 text-xs">{userName}</td>
+                    <td class="py-3 px-4 font-medium text-white">{s.nom}</td>
+                    <td class="py-3 px-4 text-white/40">{TYPE_INITIALS[firstType] ?? '?'} — {types.map((t: string) => TYPE_LABELS[t] ?? t).join(', ')}</td>
+                    <td class="py-3 px-4 text-white/35 hidden sm:table-cell">×{s.combien}</td>
+                    <td class="py-3 px-4 text-white/25 text-xs">{userName}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
           {allStock.length === 0 && (
-            <p class="text-center text-gray-500 text-sm py-8">Aucun article dans le stock global.</p>
+            <p class="text-center text-white/25 text-sm py-8">Aucun article dans le stock global.</p>
           )}
         </div>
       </section>
@@ -291,11 +295,12 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   </div>
 </AuthLayout>
 
-<script>
+<script is:inline define:vars={{ pbUrl, settingsId, lieuxVisible }}>
   // ---- Toggle lieux visibility ----
-  const toggleBtn = document.getElementById('toggle-visibility-btn') as HTMLButtonElement;
-  const visibilityLabel = document.getElementById('visibility-label') as HTMLSpanElement;
-  const visibilityMsg = document.getElementById('visibility-msg') as HTMLDivElement;
+  const toggleBtn = document.getElementById('toggle-visibility-btn');
+  const visibilityLabel = document.getElementById('visibility-label');
+  const visibilityMsg = document.getElementById('visibility-msg');
+  let currentSettingsId = settingsId;
 
   toggleBtn.addEventListener('click', async () => {
     const current = toggleBtn.dataset.current === 'true';
@@ -305,49 +310,68 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
     toggleBtn.textContent = 'Mise à jour…';
 
     try {
-      const res = await fetch('/api/admin/lieux-visibility', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visible: next }),
-      });
+      let res;
+      if (currentSettingsId) {
+        res = await fetch(`${pbUrl}/api/collections/settings/records/${currentSettingsId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: String(next) }),
+        });
+      } else {
+        res = await fetch(`${pbUrl}/api/collections/settings/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'lieux_visible', value: String(next) }),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          currentSettingsId = created.id;
+        }
+      }
 
       if (res.ok) {
         toggleBtn.dataset.current = String(next);
         visibilityLabel.textContent = next ? 'Activée' : 'Désactivée';
-        visibilityLabel.style.color = next ? '#4ade80' : '#f87171';
-        toggleBtn.textContent = next ? '🔒 Masquer les lieux' : '🔓 Révéler les lieux';
+        visibilityLabel.style.color = next ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
+        toggleBtn.textContent = next ? 'Masquer les lieux' : 'Révéler les lieux';
         toggleBtn.style.cssText = next
-          ? 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171;'
-          : 'background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80;';
-        showMsg(visibilityMsg, `Visibilité ${next ? 'activée' : 'désactivée'} avec succès.`, true);
+          ? 'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 9999px; padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;'
+          : 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.4); border-radius: 9999px; padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 500;';
+        showMsg(visibilityMsg, `Visibilité ${next ? 'activée' : 'désactivée'}.`, true);
       } else {
         const data = await res.json();
         showMsg(visibilityMsg, data.message ?? 'Erreur.', false);
-        toggleBtn.textContent = current ? '🔒 Masquer les lieux' : '🔓 Révéler les lieux';
+        toggleBtn.textContent = current ? 'Masquer les lieux' : 'Révéler les lieux';
       }
     } catch {
       showMsg(visibilityMsg, 'Erreur réseau.', false);
+      toggleBtn.textContent = current ? 'Masquer les lieux' : 'Révéler les lieux';
     } finally {
       toggleBtn.disabled = false;
     }
   });
 
   // ---- Create user ----
-  const createUserBtn = document.getElementById('create-user-btn') as HTMLButtonElement;
-  const createUserError = document.getElementById('create-user-error') as HTMLDivElement;
-  const createUserSuccess = document.getElementById('create-user-success') as HTMLDivElement;
+  const createUserBtn = document.getElementById('create-user-btn');
+  const createUserError = document.getElementById('create-user-error');
+  const createUserSuccess = document.getElementById('create-user-success');
 
   createUserBtn.addEventListener('click', async () => {
-    const name = (document.getElementById('new-name') as HTMLInputElement).value.trim();
-    const email = (document.getElementById('new-email') as HTMLInputElement).value.trim();
-    const password = (document.getElementById('new-password') as HTMLInputElement).value;
-    const admin = (document.getElementById('new-admin') as HTMLInputElement).checked;
+    const name = document.getElementById('new-name').value.trim();
+    const email = document.getElementById('new-email').value.trim();
+    const password = document.getElementById('new-password').value;
+    const passwordConfirm = document.getElementById('new-password-confirm').value;
+    const admin = document.getElementById('new-admin').checked;
 
     createUserError.classList.add('hidden');
     createUserSuccess.classList.add('hidden');
 
     if (!name || !email || !password) {
-      showMsg(createUserError, 'Tous les champs sont requis.', false);
+      showMsg(createUserError, 'Nom, email et mot de passe requis.', false);
+      return;
+    }
+    if (password !== passwordConfirm) {
+      showMsg(createUserError, 'Les mots de passe ne correspondent pas.', false);
       return;
     }
 
@@ -355,15 +379,15 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
     createUserBtn.textContent = 'Création…';
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${pbUrl}/api/collections/users/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, admin }),
+        body: JSON.stringify({ name, email, password, passwordConfirm, admin }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        showMsg(createUserError, data.message ?? 'Erreur.', false);
+        showMsg(createUserError, data.message ?? 'Erreur lors de la création.', false);
       } else {
         showMsg(createUserSuccess, 'Compte créé ! Rechargement…', true);
         setTimeout(() => window.location.reload(), 800);
@@ -379,18 +403,13 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   // ---- Delete user ----
   document.querySelectorAll('.delete-user-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
-      const target = e.currentTarget as HTMLElement;
-      const id = target.dataset.id!;
+      const id = e.currentTarget.dataset.id;
       if (!confirm('Supprimer cet utilisateur ? Cette action est irréversible.')) return;
 
       try {
-        const res = await fetch('/api/admin/users', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-        if (res.ok) {
-          target.closest('.user-row')?.remove();
+        const res = await fetch(`${pbUrl}/api/collections/users/records/${id}`, { method: 'DELETE' });
+        if (res.ok || res.status === 204) {
+          e.currentTarget.closest('.user-row')?.remove();
         } else {
           const data = await res.json();
           alert(data.message ?? 'Erreur.');
@@ -402,17 +421,17 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   });
 
   // ---- Lieu form (create/edit) ----
-  const saveLieuBtn = document.getElementById('save-lieu-btn') as HTMLButtonElement;
-  const cancelLieuBtn = document.getElementById('cancel-lieu-btn') as HTMLButtonElement;
-  const lieuxError = document.getElementById('lieu-error') as HTMLDivElement;
-  const lieuxSuccess = document.getElementById('lieu-success') as HTMLDivElement;
-  const editIdInput = document.getElementById('lieu-edit-id') as HTMLInputElement;
+  const saveLieuBtn = document.getElementById('save-lieu-btn');
+  const cancelLieuBtn = document.getElementById('cancel-lieu-btn');
+  const lieuxError = document.getElementById('lieu-error');
+  const lieuxSuccess = document.getElementById('lieu-success');
+  const editIdInput = document.getElementById('lieu-edit-id');
 
   saveLieuBtn.addEventListener('click', async () => {
     const id = editIdInput.value;
-    const nom = (document.getElementById('lieu-nom') as HTMLInputElement).value.trim();
-    const adresse = (document.getElementById('lieu-adresse') as HTMLInputElement).value.trim();
-    const imgFile = (document.getElementById('lieu-img') as HTMLInputElement).files?.[0];
+    const nom = document.getElementById('lieu-nom').value.trim();
+    const adresse = document.getElementById('lieu-adresse').value.trim();
+    const imgFile = document.getElementById('lieu-img').files?.[0];
 
     lieuxError.classList.add('hidden');
     lieuxSuccess.classList.add('hidden');
@@ -429,16 +448,15 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
     fd.append('nom', nom);
     fd.append('adresse', adresse);
     if (imgFile) fd.append('img', imgFile);
-    if (id) fd.append('id', id);
 
     try {
-      const res = await fetch('/api/admin/lieux', {
-        method: id ? 'PUT' : 'POST',
-        body: fd,
-      });
-      const data = await res.json();
+      const url = id
+        ? `${pbUrl}/api/collections/lieux/records/${id}`
+        : `${pbUrl}/api/collections/lieux/records`;
+      const res = await fetch(url, { method: id ? 'PATCH' : 'POST', body: fd });
 
       if (!res.ok) {
+        const data = await res.json();
         showMsg(lieuxError, data.message ?? 'Erreur.', false);
       } else {
         showMsg(lieuxSuccess, id ? 'Lieu modifié ! Rechargement…' : 'Lieu ajouté ! Rechargement…', true);
@@ -454,18 +472,18 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
   cancelLieuBtn.addEventListener('click', () => {
     editIdInput.value = '';
-    (document.getElementById('lieu-nom') as HTMLInputElement).value = '';
-    (document.getElementById('lieu-adresse') as HTMLInputElement).value = '';
+    document.getElementById('lieu-nom').value = '';
+    document.getElementById('lieu-adresse').value = '';
     cancelLieuBtn.classList.add('hidden');
     saveLieuBtn.textContent = 'Enregistrer';
   });
 
   document.querySelectorAll('.edit-lieu-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
-      const target = e.currentTarget as HTMLElement;
-      editIdInput.value = target.dataset.id!;
-      (document.getElementById('lieu-nom') as HTMLInputElement).value = target.dataset.nom ?? '';
-      (document.getElementById('lieu-adresse') as HTMLInputElement).value = target.dataset.adresse ?? '';
+      const target = e.currentTarget;
+      editIdInput.value = target.dataset.id;
+      document.getElementById('lieu-nom').value = target.dataset.nom ?? '';
+      document.getElementById('lieu-adresse').value = target.dataset.adresse ?? '';
       cancelLieuBtn.classList.remove('hidden');
       saveLieuBtn.textContent = 'Modifier';
       document.getElementById('lieu-nom')?.focus();
@@ -475,18 +493,13 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
 
   document.querySelectorAll('.delete-lieu-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
-      const target = e.currentTarget as HTMLElement;
-      const id = target.dataset.id!;
+      const id = e.currentTarget.dataset.id;
       if (!confirm('Supprimer ce lieu ?')) return;
 
       try {
-        const res = await fetch('/api/admin/lieux', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-        if (res.ok) {
-          target.closest('.lieu-row')?.remove();
+        const res = await fetch(`${pbUrl}/api/collections/lieux/records/${id}`, { method: 'DELETE' });
+        if (res.ok || res.status === 204) {
+          e.currentTarget.closest('.lieu-row')?.remove();
         } else {
           const data = await res.json();
           alert(data.message ?? 'Erreur.');
@@ -498,17 +511,16 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   });
 
   // ---- Stock filter ----
-  const filterType = document.getElementById('filter-type') as HTMLSelectElement;
-  const filterUser = document.getElementById('filter-user') as HTMLInputElement;
+  const filterType = document.getElementById('filter-type');
+  const filterUser = document.getElementById('filter-user');
 
   function applyFilters() {
     const type = filterType.value;
     const search = filterUser.value.toLowerCase();
     document.querySelectorAll('.stock-table-row').forEach((row) => {
-      const el = row as HTMLElement;
-      const matchType = !type || el.dataset.type === type;
-      const matchUser = !search || el.dataset.user?.includes(search);
-      el.style.display = matchType && matchUser ? '' : 'none';
+      const matchType = !type || row.dataset.type === type;
+      const matchUser = !search || row.dataset.user?.includes(search);
+      row.style.display = matchType && matchUser ? '' : 'none';
     });
   }
 
@@ -516,12 +528,11 @@ const pbUrl = import.meta.env.POCKETBASE_URL;
   filterUser.addEventListener('input', applyFilters);
 
   // ---- Helpers ----
-  function showMsg(el: HTMLDivElement, msg: string, ok: boolean) {
+  function showMsg(el, msg, ok) {
     el.textContent = msg;
     el.style.cssText = ok
-      ? 'background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;'
-      : 'background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171;';
-    el.classList.remove('hidden');
+      ? 'background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.8);'
+      : 'background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: rgba(255,255,255,0.65);';
     el.className = 'mt-3 text-sm p-3 rounded-xl';
   }
 </script>

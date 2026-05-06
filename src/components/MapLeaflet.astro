@@ -24,7 +24,7 @@ const lieuxJson = JSON.stringify(lieux);
   <p class="text-xs text-gray-600 mt-2 text-center">Carte © OpenStreetMap contributors</p>
 </div>
 
-<script define:vars={{ lieuxJson, pbUrl }}>
+<script is:inline define:vars={{ lieuxJson, pbUrl }}>
   const lieux = JSON.parse(lieuxJson);
 
   // Load Leaflet CSS

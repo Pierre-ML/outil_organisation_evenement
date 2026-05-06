@@ -1,10 +1,13 @@
 ---
+import Navbar from '../components/Navbar.astro';
+
 interface Props {
   title: string;
   description?: string;
+  user?: Record<string, any>;
 }
 
-const { title, description = 'Organise tes soirées entre amis.' } = Astro.props;
+const { title, description = 'Organise tes soirées entre amis.', user } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -17,14 +20,20 @@ const { title, description = 'Organise tes soirées entre amis.' } = Astro.props
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
+     <!-- Favicon -->
+ <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
     <style is:global>
       @import "../styles/global.css";
     </style>
   </head>
   <body>
-    <slot />
+    {user && <Navbar user={user} />}
+    <main class={user ? 'pt-20 px-4 max-w-6xl mx-auto pb-16' : ''}>
+      <slot />
+    </main>
   </body>
 </html>
